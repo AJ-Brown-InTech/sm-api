@@ -1,18 +1,13 @@
 package main
 
 import (
-	//"fmt"
 	"os"
 	"time"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	//"net/url"
 	"net/http"
-
 	"go.uber.org/zap"
-	//"go.uber.org/zap/zapcore"
+	"happy/routes"
 )
 
 var port, enviroment string
@@ -46,6 +41,14 @@ func main() {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hi"))
 	})
+	r.Post("/user/create", routes.CreateUser)
+	// r.Post("/user/update", routes.UpdateUser)
+	// r.Post("/user/delete", routes.DeleteUser)
+	// r.Post("/user/login", routes.Login)
+	// r.Post("/user/logout", routes.Logout)
+	// r.Post("/user/profile", routes.Profile)
+	// r.
+	
 
 	log.Infof("port:%s", port)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, port, time.Now().In(loc))
