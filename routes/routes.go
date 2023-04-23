@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"database/sql"
 	"net/http"
 
 	// "github.com/AJ-Brown-InTech/sm-api/middleware"
@@ -8,13 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
-//create a new user
-func CreateUser(w http.ResponseWriter, r *http.Request, z *zap.SugaredLogger) error {
+// create a new user
+func CreateUser(w http.ResponseWriter, r *http.Request, z *zap.SugaredLogger, db *sql.DB) error {
 	// user := &models.UserLogin{
 	// 	Username: "dog",
 	// 	Email: "nnheo@example.com",
 
 	// }
-	 w.Write([]byte("hello"))
-	 return nil
+
+	w.Write([]byte("hello"))
+	return nil
 }

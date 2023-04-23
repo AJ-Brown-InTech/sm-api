@@ -3,7 +3,6 @@ package session
 import (
 	"net/http"
 	"time"
-
 	"github.com/AJ-Brown-InTech/sm-api/models"
 	"github.com/google/uuid"
 	//"github.com/gorilla/securecookie"

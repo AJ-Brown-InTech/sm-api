@@ -1,13 +1,16 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"time"
+	"github.com/AJ-Brown-InTech/sm-api/routes"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/AJ-Brown-InTech/sm-api/routes"
-	"net/http"
 	"go.uber.org/zap"
+	"context"
+	"database/sql"
+  _ "github.com/mattn/go-sqlite3"
 )
 
 var port, enviroment string
@@ -24,9 +27,24 @@ func LoadEnv() {
 	}
 }
 
+
 func main() {
-	//set enviroment
+	// set enviroment
 	LoadEnv()
+	// load database
+	db, err := sql.Open("sqlite3", "./database/database.db")
+	if err != nil {
+		panic(err)
+	}
+	//defer db.Close()
+	
+
+	ctx := context.Background()
+	_, err = db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, test TEXT)")
+	if err != nil {
+		panic(err)
+	}
+	
 	//init logger
 	logger, _ := zap.NewProduction()
 	log := logger.Sugar()
@@ -40,7 +58,7 @@ func main() {
 	//Todo: pass db, logger, and cache to handlers
 	//Routes
 	r.Post("/user/create", func(w http.ResponseWriter, r *http.Request) {
-		routes.CreateUser(w, r, log)
+		routes.CreateUser(w,r,log, db)// add db
 	})
 	// r.Post("/user/update", routes.UpdateUser)
 	// r.Post("/user/delete", routes.DeleteUser)
@@ -52,4 +70,8 @@ func main() {
 	log.Infof("port:%s", port)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, port, time.Now().In(loc))
 	http.ListenAndServe(":"+port, r)
+}
+
+func Libre_Db() {
+	panic("unimplemented")
 }
