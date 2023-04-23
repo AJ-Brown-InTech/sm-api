@@ -1,8 +1,10 @@
-POST http://localhost:80/user/create HTTP/1.1
-Content-Type: application/json
+# POST http://localhost:80/user/create 
+# Content-Type: application/json
 
-{
-    "name": "John Doe",
-    "email": "johndoe@example.com",
-    "password": "mypassword123"
-}
+# {
+#     "name": "John Doe",
+#     "email": "johndoe@example.com",
+#     "password": "mypassword123"
+# }
+
+#GET http://localhost:80/ HTTP/1.1

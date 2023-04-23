@@ -5,9 +5,9 @@ import (
 	"time"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/AJ-Brown-InTech/sm-api/routes"
 	"net/http"
 	"go.uber.org/zap"
-	"happy/routes"
 )
 
 var port, enviroment string
@@ -38,10 +38,10 @@ func main() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Timeout(60 * time.Second))
 	//Todo: pass db, logger, and cache to handlers
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hi"))
+	//Routes
+	r.Post("/user/create", func(w http.ResponseWriter, r *http.Request) {
+		routes.CreateUser(w, r, log)
 	})
-	r.Post("/user/create", routes.CreateUser)
 	// r.Post("/user/update", routes.UpdateUser)
 	// r.Post("/user/delete", routes.DeleteUser)
 	// r.Post("/user/login", routes.Login)
@@ -49,7 +49,6 @@ func main() {
 	// r.Post("/user/profile", routes.Profile)
 	// r.
 	
-
 	log.Infof("port:%s", port)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, port, time.Now().In(loc))
 	http.ListenAndServe(":"+port, r)
