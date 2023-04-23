@@ -27,6 +27,23 @@ func LoadEnv() {
 	}
 }
 
+func Libre_Db() (*sql.DB, error){
+	db, err := sql.Open("sqlite3", "./database/database.db")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	
+
+	ctx := context.Background()
+	_, err = db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, test TEXT)")
+	if err != nil {
+		panic(err)
+	}
+	
+	return db, nil
+
+}
 
 func main() {
 	// set enviroment
@@ -36,9 +53,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//defer db.Close()
+	defer db.Close()
 	
-
 	ctx := context.Background()
 	_, err = db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, test TEXT)")
 	if err != nil {
@@ -70,8 +86,4 @@ func main() {
 	log.Infof("port:%s", port)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, port, time.Now().In(loc))
 	http.ListenAndServe(":"+port, r)
-}
-
-func Libre_Db() {
-	panic("unimplemented")
 }

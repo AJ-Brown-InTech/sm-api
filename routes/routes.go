@@ -10,7 +10,7 @@ import (
 )
 
 // create a new user
-func CreateUser(w http.ResponseWriter, r *http.Request, z *zap.SugaredLogger, db *sql.DB) error {
+func CreateUser(w http.ResponseWriter, r *http.Request, db *sql.DB, z *zap.SugaredLogger,) error {
 	// user := &models.UserLogin{
 	// 	Username: "dog",
 	// 	Email: "nnheo@example.com",
