@@ -1,16 +1,16 @@
 package main
 
 import (
+	"context"
+	"database/sql"
+	//"github.com/AJ-Brown-InTech/sm-api/routes"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/mattn/go-sqlite3"
+	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"time"
-	"github.com/AJ-Brown-InTech/sm-api/routes"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"go.uber.org/zap"
-	"context"
-	"database/sql"
-  _ "github.com/mattn/go-sqlite3"
 )
 
 var port, enviroment string
@@ -27,22 +27,20 @@ func LoadEnv() {
 	}
 }
 
-func Libre_Db() (*sql.DB, error){
+func Libre_Db() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "./database/database.db")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
-	
 
 	ctx := context.Background()
 	_, err = db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, test TEXT)")
 	if err != nil {
 		panic(err)
 	}
-	
-	return db, nil
 
+	return db, nil
 }
 
 func main() {
@@ -54,13 +52,13 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	
+
 	ctx := context.Background()
 	_, err = db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, test TEXT)")
 	if err != nil {
 		panic(err)
 	}
-	
+
 	//init logger
 	logger, _ := zap.NewProduction()
 	log := logger.Sugar()
@@ -74,7 +72,7 @@ func main() {
 	//Todo: pass db, logger, and cache to handlers
 	//Routes
 	r.Post("/user/create", func(w http.ResponseWriter, r *http.Request) {
-		routes.CreateUser(w,r,log, db)// add db
+	Register(w, r, log, db)
 	})
 	// r.Post("/user/update", routes.UpdateUser)
 	// r.Post("/user/delete", routes.DeleteUser)
@@ -82,8 +80,12 @@ func main() {
 	// r.Post("/user/logout", routes.Logout)
 	// r.Post("/user/profile", routes.Profile)
 	// r.
-	
+
 	log.Infof("port:%s", port)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, port, time.Now().In(loc))
 	http.ListenAndServe(":"+port, r)
+}
+
+func Register(w http.ResponseWriter, r *http.Request, log *zap.SugaredLogger, db *sql.DB) {
+	panic("unimplemented")
 }

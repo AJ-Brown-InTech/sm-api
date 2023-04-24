@@ -1,6 +1,6 @@
-package models
+package main
 
-import(
+import (
 	"time"
 )
 
@@ -11,7 +11,7 @@ type UserLogin struct {
 }
 
 type UserSession struct {
-	SessionId         string    `json:"session_id"`
+	SessionId      string    `json:"session_id"`
 	LastAccessTime time.Time `json:"last_access"`
-	Username string `json:"username"`
+	Username       string    `json:"username"`
 }
