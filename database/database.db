@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    email TEXT,
+    password TEXT,
+    fullname TEXT,
+    bio TEXT,
+    links TEXT,
+    occupation TEXT,
+    avatar BLOB,
+    rating TEXT,
+    city TEXT,
+    state TEXT,
+    session_id TEXT,
+    birthday TIMESTAMP
+);

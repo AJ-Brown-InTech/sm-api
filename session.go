@@ -1,26 +1,15 @@
 package main
 
 import (
-	//"github.com/AJ-Brown-InTech/sm-api/models"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
-	//"github.com/gorilla/securecookie"
-	"go.uber.org/zap"
 )
 
-func CreateSession(w http.ResponseWriter, r *http.Request, user *UserLogin, l *zap.SugaredLogger) error {
+func CreateSession(w http.ResponseWriter, r *http.Request, user string, l *zap.SugaredLogger) (string, error) {
+	// ! add error handling
 	session_id := uuid.New().String()
-	//set user cookie
-	userCookie := &http.Cookie{
-		Name:    "user",
-		Value:   user.Username.String,
-		Path:    "/",
-		Expires: time.Now().Add(time.Hour * 24),
-	}
-	http.SetCookie(w, userCookie)
-
-	// set session cookie
 	sessionCookie := &http.Cookie{
 		Name:    "session_id",
 		Value:   session_id,
@@ -28,12 +17,8 @@ func CreateSession(w http.ResponseWriter, r *http.Request, user *UserLogin, l *z
 		Expires: time.Now().Add(time.Hour * 24),
 	}
 	http.SetCookie(w, sessionCookie)
-
-	//store session_id in database
-	//TODO: store sessionId in database
-
-	l.Infof("Session created for user %s on %s", user.Username, string(time.Now().Format("2006-01-02 15:04:05 MST")))
-	return nil
+	l.Infof("Session created for user %s on %s", user, string(time.Now().Format("2006-01-02 15:04:05 MST")))
+	return session_id, nil
 }
 
 func GetSession(w http.ResponseWriter, r *http.Request, l *zap.SugaredLogger) (*UserSession, error) {
