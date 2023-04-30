@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/AJ-Brown-InTech/sm-api/routes"
+	//"github.com/AJ-Brown-InTech/sm-api/routes"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/mattn/go-sqlite3"
@@ -70,9 +70,8 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 	//Todo: pass db, logger, and cache to handlers
 	//Routes
-	r.Post("/user/create", func(w http.ResponseWriter, r *http.Request) {
-	routes.Register(w, r, log, db)
-	})
+	r.Post("/user/create", CreateUser(log,db))
+	
 	// r.Post("/user/update", routes.UpdateUser)
 	// r.Post("/user/delete", routes.DeleteUser)
 	// r.Post("/user/login", routes.Login)
@@ -82,4 +81,8 @@ func main() {
 	log.Infof("port:%s", port)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, port, time.Now().In(loc))
 	http.ListenAndServe(":"+port, r)
+}
+
+func RegisterUser(log *zap.SugaredLogger, db *sql.DB) {
+	panic("unimplemented")
 }

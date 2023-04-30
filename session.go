@@ -1,7 +1,7 @@
-package session
+package main
 
 import (
-	"github.com/AJ-Brown-InTech/sm-api/models"
+	//"github.com/AJ-Brown-InTech/sm-api/models"
 	"github.com/google/uuid"
 	"net/http"
 	"time"
@@ -9,12 +9,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateSession(w http.ResponseWriter, r *http.Request, user *models.UserLogin, l *zap.SugaredLogger) error {
+func CreateSession(w http.ResponseWriter, r *http.Request, user *UserLogin, l *zap.SugaredLogger) error {
 	session_id := uuid.New().String()
 	//set user cookie
 	userCookie := &http.Cookie{
 		Name:    "user",
-		Value:   user.Username,
+		Value:   user.Username.String,
 		Path:    "/",
 		Expires: time.Now().Add(time.Hour * 24),
 	}
@@ -36,7 +36,7 @@ func CreateSession(w http.ResponseWriter, r *http.Request, user *models.UserLogi
 	return nil
 }
 
-func GetSession(w http.ResponseWriter, r *http.Request, l *zap.SugaredLogger) (*models.UserSession, error) {
+func GetSession(w http.ResponseWriter, r *http.Request, l *zap.SugaredLogger) (*UserSession, error) {
 	//TODO: get both cookies in one call
 	//get user cookie
 	cookie, err := r.Cookie("user")
@@ -56,7 +56,7 @@ func GetSession(w http.ResponseWriter, r *http.Request, l *zap.SugaredLogger) (*
 		return nil, nil
 	}
 	//create a user session instance and assign the found cookies for return
-	user := &models.UserSession{}
+	user := &UserSession{}
 	user.Username = cookie.Value
 	user.SessionId = session.Value
 	return user, nil
