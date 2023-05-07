@@ -5,7 +5,7 @@ FROM alpine:3.14
 RUN apk add --no-cache sqlite sqlite-dev
 
 # Copy the SQLite database file into the container
-COPY base.db /app/base.db
+COPY database.db /app/database.db
 
 # Set the working directory to /app
 WORKDIR /app
@@ -14,4 +14,4 @@ WORKDIR /app
 EXPOSE 8080
 
 # Start the SQLite server and listen on port 8080
-CMD ["sqlite3", "base.db"]
+CMD ["sqlite3", "database.db"]

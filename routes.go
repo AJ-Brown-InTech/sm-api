@@ -1,73 +1,83 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
-
-	"github.com/AfterShip/email-verifier"
-	"github.com/Masterminds/squirrel"
-
-	//"github.com/go-chi/chi/v5"
-	"net/http"
-
+	emailverifier "github.com/AfterShip/email-verifier"
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
+	"net/http"
 )
 
-// create a new user
-func CreateUser(z *zap.SugaredLogger, d *sql.DB) http.HandlerFunc {
+func Test(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		z.Infof("Connected")
+	}
+}
 
-		var newUser = &UserProfile{}
-		err := json.NewDecoder(r.Body).Decode(newUser)
+// create a new user
+func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var newUser UserProfile
+		d := json.NewDecoder(r.Body)
+		d.DisallowUnknownFields()
+		err := d.Decode(&newUser)
 		if err != nil {
-			z.Errorf("Error: %v", err)
-		}
-
-		if len(newUser.Username) > 15 || len(newUser.Username) < 6 {
-			z.Errorf("Error: the username needs to be 6 characters minimum")
+			z.Errorf("Error: %v", err.Error())
 			return
 		}
-
-		if ok := emailverifier.IsAddressValid(newUser.Email); !ok {
-			z.Errorf("Error: email address not is valid")
+		// validate data
+		switch {
+		case len(newUser.Username) > 15:
+			z.Error("username too long")
+			return
+		case len(newUser.Username) < 6:
+			z.Error("username too short")
+			return
+		default:
+			z.Info("username valid")
+		}
+		verify := emailverifier.NewVerifier()
+		res, _ := verify.Verify(newUser.Email)
+		if !res.Syntax.Valid {
+			z.Error("email not valid")
 			return
 		}
-
 		if len(newUser.Password) < 12 {
 			z.Errorf("Error: the password needs to be 12 characters minimum")
 			return
 		}
 
-		sessionId, _ := CreateSession(w, r, newUser.Username, z)
-		_, err = d.Exec(`Insert into users(username, email, password, rating, session_id) Values($1, $2, $3, $4, $5)`, newUser.Username, newUser.Email, newUser.Password, newUser.Rating, sessionId)
+		// TODO: hash the password
+		// create a session and store with other data
+		sessionID := uuid.New().String()
+		query := fmt.Sprintf(
+			"INSERT INTO users (username, email, password, rating, birthday, session_id) VALUES ('%s', '%s', '%s', %d, '%s', '%s')",
+			newUser.Username,
+			newUser.Email,
+			newUser.Password,
+			newUser.Rating,
+			newUser.Birthday,
+			sessionID,
+		)
+		_, err = db.Exec(query)
 		if err != nil {
-			z.Errorf("Error: Database error = %w", err)
+			z.Errorf("Error: creating user  = %w", err)
+			return
 		}
-
-		var createdUser UserProfile
-		query := fmt.Sprintf("Select * from user where username = %s", newUser.Username)
-		_, err = d.Exec(query, createdUser) //(&createdUser, query)
+		// return the session_id
+		type Session struct {
+			ID string `json:"session_id"`
+		}
+		result := Session{ID: sessionID}
+		w.Header().Set("Content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		err = json.NewEncoder(w).Encode(&result)
 		if err != nil {
-			z.Errorf("Error: Database retrieving user = %w", err)
+			z.Error("Error writing response")
+			return
 		}
-
-		var createdUser UserProfile
-		val, err := json.Marshal()
-		w.WriteHeader(http.StatusCreated)
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode()
-		// user := &models.UserLogin{
-		// 	Username: "dog",
-		// 	Email: "nnheo@example.com",
-		// }
-		// err := d.Ping()
-		// if err != nil {
-		// 	return err
-		// }
-		// z.Infof("helo kitty: %v", err)
-		// w.Write([]byte("hello"))
-
 	}
 }
