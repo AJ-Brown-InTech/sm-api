@@ -44,18 +44,20 @@ func main() {
 	log.Infof("Connected to database at %s...", loc)
 
 	// Initialize router and add handlers
+	r := chi.NewRouter()
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	// Routes
 	router.Get("/", Test(log, db))
 	router.Post("/user/create", Register(log, db))
-
+	router.Get("/user/{id}", GetUserBySessionId(log,db))
 	// r.Post("/user/update", routes.UpdateUser)
 	// r.Post("/user/delete", routes.DeleteUser)
 	// r.Post("/user/login", routes.Login)
 	// r.Post("/user/logout", routes.Logout)
 	// r.Post("/user/profile", routes.Profile)
+	r.Mount("/api", router)
 	log.Infof("Libra Version: %s | Listening on port:%s | Time: %s", Version, Port, time.Now().In(loc))
-	http.ListenAndServe(":"+Port, router)
+	http.ListenAndServe(":"+Port, r)
 }

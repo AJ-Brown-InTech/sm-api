@@ -93,3 +93,11 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 		}
 	}
 }
+
+
+func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request){
+	
+
+	}
+}
