@@ -5,7 +5,7 @@ POST http://localhost/user/create
      "username": "JohnDoe123",
      "email": "johndoe@example.com",
      "password": "mypassword123",
-    "birthday": "1996-03-05T00:00:00Z"
+     "birthday": "1996-03-05T00:00:00Z"
  }
 
 #GET http://localhost:80/ HTTP/1.1

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/go-chi/chi/v5"
-	//"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
@@ -32,7 +32,7 @@ func main() {
 	loc, _ := time.LoadLocation("America/Chicago")
 
 	// Load database
-	db, err := sqlx.Open("sqlite3", "database.db")
+	db, err := sqlx.Open("sqlite3", "./database/libra.db")
 	if err != nil {
 		log.Errorf("Error connecting to database: %v", err)
 	}
@@ -45,8 +45,8 @@ func main() {
 
 	// Initialize router and add handlers
 	router := chi.NewRouter()
-	//router.Use(middleware.Logger)
-	//router.Use(middleware.Recoverer)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 	// Routes
 	router.Get("/", Test(log, db))
 	router.Post("/user/create", Register(log, db))
