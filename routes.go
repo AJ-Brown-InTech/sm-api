@@ -8,6 +8,7 @@ import (
 	"time"
 
 	emailverifier "github.com/AfterShip/email-verifier"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -101,6 +102,23 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 
 func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		query := fmt.Sprintf(`Select * from users where session_id = '%s'`, id)
+		var user UserProfile
+		err := db.Get(&user, query)
+		if err != nil {
+			z.Errorf("error fetching user from db :%v", err.Error())
+			http.Error(w, "error fetching user from database", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-type", "application/json")
+		err = json.NewEncoder(w).Encode(&user)
+		if err != nil {
+			z.Error("error writing response")
+			http.Error(w, "error writing response", http.StatusInternalServerError)
+		}
 	}
 }
 

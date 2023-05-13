@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	//"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
@@ -51,8 +51,8 @@ func main() {
 	// Initialize router and add handlers
 	r := chi.NewRouter()
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
+	//router.Use(middleware.Logger)
+	//router.Use(middleware.Recoverer)
 	// Routes
 	router.Get("/", Test(log, db))
 	router.Post("/user/create", Register(log, db))
