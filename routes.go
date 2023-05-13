@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
-"time"
+	"time"
+
 	emailverifier "github.com/AfterShip/email-verifier"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -34,11 +36,11 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 		switch {
 		case len(newUser.Username) > 15:
 			z.Error("username too long")
-			http.Error(w, "username too long", http.StatusInternalServerError)
+			http.Error(w, "username too long", http.StatusBadRequest)
 			return
 		case len(newUser.Username) < 6:
 			z.Error("username too short")
-			http.Error(w, "username too short", http.StatusInternalServerError)
+			http.Error(w, "username too short", http.StatusBadRequest)
 			return
 		default:
 			z.Info("username valid")
@@ -47,29 +49,32 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 		res, _ := verify.Verify(newUser.Email)
 		if !res.Syntax.Valid {
 			z.Error("email not valid")
-			http.Error(w, "email not valid", http.StatusInternalServerError)
+			http.Error(w, "email not valid", http.StatusBadRequest)
 			return
 		}
 		if len(newUser.Password) < 12 {
 			z.Errorf("Error: the password needs to be 12 characters minimum")
-			http.Error(w, "the password needs to be 12 characters minimum", http.StatusInternalServerError)
+			http.Error(w, "the password needs to be 12 characters minimum", http.StatusBadRequest)
 			return
 		}
 
 		// TODO: hash the password
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(newUser.Password))
 		// create a session and store with other data
 		sessionID := uuid.New().String()
-		query := fmt.Sprintf(`INSERT INTO users(username, email, password, rating, birthday, session_id, updated_at, created_at) VALUES ('%s', '%s', '%s', %f, '%s', '%s', '%s', '%s')`,
+
+		query := fmt.Sprintf(
+			`INSERT INTO users(username, email, password, rating, birthday, session_id, updated_at, created_at) VALUES ('%s', '%s', '%s', %f, '%s', '%s', '%s', '%s')`,
 			newUser.Username,
 			newUser.Email,
-			newUser.Password,
+			encodedPassword,
 			newUser.Rating,
 			newUser.Birthday,
 			sessionID,
 			time.Now(),
 			time.Now(),
 		)
-		//INSERT INTO users(username, email, password, rating, birthday, session_id) VALUES ('JohnDoe123', 'johndoe@example.com', 'mypassword123', 0, '1996-03-05 00:00:00 +0000 UTC', 'eb2249c7-c7ae-4cb2-a3de-d600cb6e0a51')
+		// INSERT INTO users(username, email, password, rating, birthday, session_id) VALUES ('JohnDoe123', 'johndoe@example.com', 'mypassword123', 0, '1996-03-05 00:00:00 +0000 UTC', 'eb2249c7-c7ae-4cb2-a3de-d600cb6e0a51')
 
 		_, err = db.Exec(query)
 		if err != nil {
@@ -94,10 +99,77 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
+func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+	}
+}
 
-func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc{
-	return func(w http.ResponseWriter, r *http.Request){
-	
+func UserLogin(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var creds Login
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		err := decoder.Decode(&creds)
+		if err != nil {
+			z.Errorf("error reading in request body: %v", err.Error())
+			http.Error(w, "request body error", http.StatusBadRequest)
+			return
+		}
 
+		superString := base64.StdEncoding.EncodeToString([]byte(creds.Password))
+		var query string
+		if creds.Email.Valid {
+			query = fmt.Sprintf(
+				`Select email, password from users where email = '%s' and password = '%s'`,
+				creds.Email.String,
+				superString,
+			)
+		}
+		if creds.Username.Valid {
+			query = fmt.Sprintf(
+				`Select username, password from users where username = '%s' and password = '%s'`,
+				creds.Username.String,
+				superString,
+			)
+		}
+		_, err = db.Exec(query)
+		if err != nil {
+			z.Errorf("error fetching user from databse", err.Error())
+			http.Error(w, "error fetching user from database", http.StatusInternalServerError)
+			return
+		}
+
+		sessionId := uuid.New().String()
+		var updateStatement string
+		if creds.Email.Valid {
+			updateStatement = fmt.Sprintf(
+				`update users set session_id = '%s' where email = '%s'`,
+				sessionId,
+				creds.Email.String,
+			)
+		}
+		if creds.Username.Valid {
+			updateStatement = fmt.Sprintf(
+				`update users set session_id = '%s' where username = '%s'`,
+				sessionId,
+				creds.Username.String,
+			)
+		}
+
+		_, err = db.Exec(updateStatement)
+		if err != nil {
+			z.Error("error updating user session")
+			http.Error(w, "error updating user session", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-type", "application/json")
+		_, err = w.Write([]byte(fmt.Sprintf(`{"session_id":'%s'}`, sessionId)))
+		if err != nil {
+			z.Error("error wrting response")
+			http.Error(w, "error wrting response", http.StatusInternalServerError)
+			return
+		}
 	}
 }
