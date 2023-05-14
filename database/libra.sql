@@ -1,18 +1,17 @@
-CREATE TABLE
-  IF NOT EXISTS users (
-    id integer primary key autoincrement not null,
-    username TEXT unique,
-    email TEXT not null unique,
-    password TEXT not null,
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
     fullname TEXT,
     bio TEXT,
     occupation TEXT,
     avatar BLOB,
-    rating TEXT,
+    rating REAL,
     city TEXT,
     state TEXT,
-    session_id TEXT unique,
-    birthday TIMESTAMP not null,
-    updated_at TIMESTAMP,
-    created_at TIMESTAMP
-  );
+    session_id TEXT UNIQUE,
+    birthday TEXT NOT NULL,
+    updated_at TEXT,
+    created_at TEXT
+);

@@ -6,18 +6,19 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
+	sq"github.com/Masterminds/squirrel"
 	emailverifier "github.com/AfterShip/email-verifier"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+
 	"go.uber.org/zap"
 )
 
 func Test(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		z.Infof("Connected")
+		z.Infof("Connected to libre")
 	}
 }
 
@@ -53,19 +54,19 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "email not valid", http.StatusBadRequest)
 			return
 		}
-		if len(newUser.Password) < 12 {
+		if len(newUser.Password) < 18 {
 			z.Errorf("Error: the password needs to be 12 characters minimum")
 			http.Error(w, "the password needs to be 12 characters minimum", http.StatusBadRequest)
 			return
 		}
 
-		// TODO: hash the password
+		
 		encodedPassword := base64.StdEncoding.EncodeToString([]byte(newUser.Password))
 		// create a session and store with other data
 		sessionID := uuid.New().String()
-
+		
 		query := fmt.Sprintf(
-			`INSERT INTO users(username, email, password, rating, birthday, session_id, updated_at, created_at) VALUES ('%s', '%s', '%s', %f, '%s', '%s', '%s', '%s')`,
+			`INSERT INTO users(username, email, password, rating, birthday, session_id, updated_at, created_at, fullname) VALUES ('%s', '%s', '%s', %f, '%v', '%s', '%v', '%v', '%s')`,
 			newUser.Username,
 			newUser.Email,
 			encodedPassword,
@@ -74,7 +75,8 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 			sessionID,
 			time.Now(),
 			time.Now(),
-		)
+			newUser.FullName.String,
+			)
 		// INSERT INTO users(username, email, password, rating, birthday, session_id) VALUES ('JohnDoe123', 'johndoe@example.com', 'mypassword123', 0, '1996-03-05 00:00:00 +0000 UTC', 'eb2249c7-c7ae-4cb2-a3de-d600cb6e0a51')
 
 		_, err = db.Exec(query)
@@ -104,6 +106,7 @@ func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		query := fmt.Sprintf(`Select * from users where session_id = '%s'`, id)
+		
 		var user UserProfile
 		err := db.Get(&user, query)
 		if err != nil {
@@ -111,7 +114,7 @@ func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "error fetching user from database", http.StatusInternalServerError)
 			return
 		}
-
+		
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-type", "application/json")
 		err = json.NewEncoder(w).Encode(&user)
@@ -183,10 +186,49 @@ func UserLogin(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-type", "application/json")
-		_, err = w.Write([]byte(fmt.Sprintf(`{"session_id":'%s'}`, sessionId)))
+		_, err = w.Write([]byte(fmt.Sprintf(`{"session_id":"%s"}`, sessionId)))
 		if err != nil {
 			z.Error("error wrting response")
 			http.Error(w, "error wrting response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func UpdateUser(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		var user map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&user)
+		if err != nil {
+			z.Errorf("error reading request body: %v", err)
+			http.Error(w, "error reading request body", http.StatusBadRequest)
+			return
+		}
+
+		statementBuilder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).RunWith(db)
+		update:= statementBuilder.Update("users").SetMap(user).Where(sq.Eq{"session_id": chi.URLParam(r, "id")})
+		_, err = update.Exec()
+		if err != nil {
+			z.Errorf("error updating user: %v", err.Error())
+			http.Error(w, "error updating user", http.StatusInternalServerError)
+			return
+		}
+
+		var updatedUser UserProfile	
+		err = db.Get(&updatedUser, fmt.Sprintf(`Select * from users where session_id = '%s'`, chi.URLParam(r,"id")))
+		if err!= nil {
+			z.Errorf("error fetching user from db :%v", err.Error())
+			http.Error(w, "error fetching user from database", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-type", "application/json")
+		err = json.NewEncoder(w).Encode(&updatedUser)
+		if err != nil {
+			z.Error("error writing response")
+			http.Error(w, "error writing response", http.StatusInternalServerError)
 			return
 		}
 	}

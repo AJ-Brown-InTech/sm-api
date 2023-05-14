@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"os"
 	"time"
-
 	"github.com/go-chi/chi/v5"
-	//"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
@@ -51,16 +50,16 @@ func main() {
 	// Initialize router and add handlers
 	r := chi.NewRouter()
 	router := chi.NewRouter()
-	//router.Use(middleware.Logger)
+	router.Use(middleware.Logger)
 	//router.Use(middleware.Recoverer)
 	// Routes
 	router.Get("/", Test(log, db))
 	router.Post("/user/create", Register(log, db))
-	router.Get("/user/{id}", GetUserBySessionId(log, db))
 	router.Post("/user/login", UserLogin(log, db))
+	router.Get("/user/profile/{id}", GetUserBySessionId(log, db))
+	router.Post("/user/update/{id}", UpdateUser(log, db))
 	// r.Post("/user/delete", routes.DeleteUser)
-	// r.Post("/user/login", routes.Login)
-	// r.Post("/user/logout", routes.Logout)
+	
 	// r.Post("/user/profile", routes.Profile)
 	r.Mount("/api", router)
 	log.Infof(
