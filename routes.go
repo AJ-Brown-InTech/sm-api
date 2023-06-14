@@ -25,7 +25,7 @@ func Test(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 // create a new user
 func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var newUser UserProfile
+		var newUser User
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()
 		err := d.Decode(&newUser)
@@ -64,19 +64,29 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 		encodedPassword := base64.StdEncoding.EncodeToString([]byte(newUser.Password))
 		// create a session and store with other data
 		sessionID := uuid.New().String()
-		
 		query := fmt.Sprintf(
-			`INSERT INTO users(username, email, password, rating, birthday, session_id, updated_at, created_at, fullname) VALUES ('%s', '%s', '%s', %f, '%v', '%s', '%v', '%v', '%s')`,
+			`INSERT INTO users(username, email, password, fullname, bio, whoareyou, avatar, account_rating, post_rating, follower_count, following_count, post_count, location, session_id, birthday, updated_at, created_at, active)
+			VALUES ('%s', '%s', '%s', '%s', '%s', '%s', %v, %f, %f, %d, %d, %d, '%s', '%s', '%s', '%v', '%v', %t)`,
 			newUser.Username,
 			newUser.Email,
 			encodedPassword,
-			newUser.Rating,
-			newUser.Birthday,
-			sessionID,
-			time.Now(),
-			time.Now(),
 			newUser.FullName.String,
-			)
+			newUser.Bio.String,
+			newUser.WhoAreYou.String,
+			newUser.Avatar,
+			newUser.AccountRating,
+			newUser.PostRating,
+			newUser.FollowerCount,
+			newUser.FollowingCount,
+			newUser.PostCount,
+			newUser.Location.String,
+			sessionID,
+			newUser.Birthday,
+			time.Now(),
+			time.Now(),
+			newUser.Active,
+		)
+		
 		// INSERT INTO users(username, email, password, rating, birthday, session_id) VALUES ('JohnDoe123', 'johndoe@example.com', 'mypassword123', 0, '1996-03-05 00:00:00 +0000 UTC', 'eb2249c7-c7ae-4cb2-a3de-d600cb6e0a51')
 
 		_, err = db.Exec(query)
@@ -102,12 +112,26 @@ func Register(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
+		//Retrieve all followers of a user
+		// SELECT users.username
+		// FROM users
+		// JOIN followers ON followers.follower_share_key = users.share_key
+		// WHERE followers.followed_share_key = 'user_share_key';
+
+		// -- Retrieve all users that a user is following
+		// SELECT users.username
+		// FROM users
+		// JOIN followers ON followers.followed_share_key = users.share_key
+		// WHERE followers.follower_share_key = 'user_share_key';
 func GetUserBySessionId(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		query := fmt.Sprintf(`Select * from users where session_id = '%s'`, id)
-		
-		var user UserProfile
+		query := fmt.Sprintf(`Select * from users 
+		JOIN followers ON followers.follower = users.share_key
+		JOIN followers ON followers.followed = users.share_key
+		WHERE session_id = '%s'`, id)
+
+		var user User
 		err := db.Get(&user, query)
 		if err != nil {
 			z.Errorf("error fetching user from db :%v", err.Error())
@@ -195,6 +219,7 @@ func UserLogin(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	}
 }
 
+//add a payload validator
 func UpdateUser(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -207,7 +232,9 @@ func UpdateUser(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 		}
 
 		statementBuilder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).RunWith(db)
-		update:= statementBuilder.Update("users").SetMap(user).Where(sq.Eq{"session_id": chi.URLParam(r, "id")})
+		update:= statementBuilder.Update("users").SetMap(user).
+		Set("updated_at", time.Now()).
+		Where(sq.Eq{"session_id": chi.URLParam(r, "id")})
 		_, err = update.Exec()
 		if err != nil {
 			z.Errorf("error updating user: %v", err.Error())
@@ -215,7 +242,7 @@ func UpdateUser(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 			return
 		}
 
-		var updatedUser UserProfile	
+		var updatedUser User
 		err = db.Get(&updatedUser, fmt.Sprintf(`Select * from users where session_id = '%s'`, chi.URLParam(r,"id")))
 		if err!= nil {
 			z.Errorf("error fetching user from db :%v", err.Error())
@@ -231,5 +258,65 @@ func UpdateUser(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
 			http.Error(w, "error writing response", http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func AddFollower(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		// Decode the request body into a struct
+		type payload struct {Followed string `json:"followed" db:"followed"`}
+		var AddUser payload
+	 	err := json.NewDecoder(r.Body).Decode(&AddUser)
+		if err != nil {
+			z.Errorf("error reading request body: %v", err)
+			http.Error(w, "error reading request body", http.StatusBadRequest)
+			return
+		}
+
+		//retreive the current user
+		var userSharekey map[string]string
+		err = db.Get(&userSharekey, fmt.Sprintf(`Select share_key from users where session_id = '%s'`, id))
+		if err!= nil {
+            z.Errorf("error fetching user from db :%v", err.Error())
+            http.Error(w, "error fetching user from database", http.StatusInternalServerError)
+            return
+        }
+		_, err = db.Exec(fmt.Sprintf(`insert into followers(follower, followed) VALUES (%s, %s)`, userSharekey["share_key"], AddUser.Followed))
+		if err != nil {
+			z.Errorf("error adding follower to database: %v", err)
+			http.Error(w, "error adding follower to database", http.StatusInternalServerError)
+			return
+		}
+
+		// Retrieve the new followers count
+		var newFollowersCount int
+		err = db.Get(&newFollowersCount, fmt.Sprintf(`SELECT COUNT(*) FROM followers WHERE followed = '%s'`, AddUser.Followed))
+		if err != nil {
+			z.Errorf("error retrieving followers count: %v", err)
+			http.Error(w, "error retrieving followers count", http.StatusInternalServerError)
+			return
+		}
+
+		// Return a success response
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"message":           "Follower added successfully",
+			"new_followers_count": newFollowersCount,
+		}
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			z.Errorf("error writing response: %v", err)
+			http.Error(w, "error writing response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+
+func RemoveFollower(z *zap.SugaredLogger, db *sqlx.DB) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request) {
+		
 	}
 }

@@ -1,0 +1,13 @@
+# development enviroment
+ENVIROMENT: development
+SERVER:
+  port: 8080
+DATABASE:
+  host: 127.0. 0.1 #example.host.db
+  port: 5342
+  username: username
+  password: password
+  dbname : libre_db
+  max_connections: 10
+VERSION:
+  release: 0.0.1

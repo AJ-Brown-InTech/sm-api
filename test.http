@@ -1,14 +1,14 @@
-# GET http://localhost/api/
-#  POST http://localhost/api/user/create 
-#      Content-Type: application/json
+ #GET http://localhost/api/
+  POST http://localhost/api/user/create 
+      Content-Type: application/json
 
-#  {
-#      "username": "TestAcc789",
-#      "email": "789@example.com",
-#      "password": "mypassword123456789123",
-#      "birthday": "1996-03-05T00:00:00Z",
-#      "fullname" : "TestAccount"    
-#  }
+  {
+      "username": "TestAcc789",
+      "email": "789@example.com",
+      "password": "mypassword123456789123",
+      "birthday": "1996-03-05T00:00:00Z",
+      "fullname" : "TestAccount"    
+  }
 
 #GET http://localhost/api/user/profile/fa8ce5eb-9950-40fb-98b7-9660e610d3ce
 
@@ -21,9 +21,16 @@
      
 #  }
 
-  POST http://localhost/api/user/update/38a03320-3060-4fc4-abc7-f2882623e851
-    Content-Type: application/json
+#   POST http://localhost/api/user/update/38a03320-3060-4fc4-abc7-f2882623e851
+#     Content-Type: application/json
 
- {
-       "fullname": "Test#2"
- }
+#  {
+#        "city": "Austin"
+#  }
+
+#   POST http://localhost/api/user/follower/add/38a03320-3060-4fc4-abc7-f2882623e851
+#     Content-Type: application/json
+
+{
+"followed": ""
+}
