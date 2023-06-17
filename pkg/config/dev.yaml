@@ -1,5 +1,6 @@
 # development enviroment
-ENVIROMENT: development
+ENVIROMENT: 
+  env: development
 SERVER:
   port: 8080
 DATABASE:
@@ -7,7 +8,7 @@ DATABASE:
   port: 5342
   username: username
   password: password
-  dbname : libre_db
+  dbname : postgres
   max_connections: 10
 VERSION:
   release: 0.0.1

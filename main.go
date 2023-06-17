@@ -1,61 +1,83 @@
 package main
 
 import (
-
+	"net/http"
 	"time"
 
-
 	"github.com/AJ-Brown-InTech/sm-api/pkg/config"
-	// "github.com/go-chi/chi/v5"
-	// "github.com/go-chi/chi/v5/middleware"
+	 "github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	// "github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
+	
 )
 
 var (
 	Port, Environment, Version, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_DATABASE string
 )
 
-func init() {
+type Middleware interface{
+	ProccessMiddleware(args any) (http.Handler, error)
+}
 
-file, err := config.SetupEnv()
+type RequestMiddleware struct {
+	TracerId string
+	FromRoute string
+}
+
+type SessionMiddleware struct {
+	SessionToken string
+	SessionExpiration string
+}
+
+func(r RequestMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.HandlerFunc, error) {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		next.ServeHTTP(w, req)
+	}), nil
+}
+
+func(s SessionMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.HandlerFunc, error) {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		next.ServeHTTP(w, req)
+	}), nil
+}
+
+func init() { // could throw error if running test
+
+	file, err := config.SetupEnv()
 	if err != nil {
 		logrus.Errorf("Error reading config file: %v", err)
 		return
 	}
 
-  DB_DATABASE = file.Database.DBName
-  DB_PASSWORD = file.Database.Password
-  DB_USERNAME = file.Database.Username
-  DB_PORT = file.Database.Port
-  DB_HOST = file.Database.Host
-  Version = file.Version.Release
-  Environment = file.Env //TODO: not reading fix struct 
-  Port = file.Server.Port
+	DB_DATABASE = file.Database.DBName
+	DB_PASSWORD = file.Database.Password
+	DB_USERNAME = file.Database.Username
+	DB_PORT = file.Database.Port
+	DB_HOST = file.Database.Host
+	Version = file.Version.Release
+	Environment = file.Enviroment.Env 
+	Port = file.Server.Port
 
-  logrus.Infof("ANOTHERTEST:%v",Environment)
-
-  if Port == "" || Environment == "" || Version == "" || DB_HOST == "" || DB_PORT == "" || DB_USERNAME == "" || DB_PASSWORD == "" || DB_DATABASE == "" {
-		panic("Enviroment varaibles aren't properly set, please revise or contact admin.")
-  }
-
+	if Port == "" || Environment == "" || Version == "" || DB_HOST == "" || DB_PORT == "" || DB_USERNAME == "" || DB_PASSWORD == "" || DB_DATABASE == "" {
+		panic("Enviroment varaibles aren't properly set, please revise")
+	}
 }
 
+//Todo: add cache & db
 func main() {
-	// Initialize logger
-	//logger, _ := zap.NewProduction()
-	//log := logger.Sugar()
+	
 	loc, _ := time.LoadLocation("America/Chicago")
-	logrus.Infof("ANOTHERTEST:%v",loc)
 
+	// router initialization
+	r := chi.NewRouter() 
+	router := chi.NewRouter()
 
-
-	// // Initialize router and add handlers
-	// r := chi.NewRouter()
-	// router := chi.NewRouter()
-	// router.Use(middleware.Logger)
-	// //router.Use(middleware.Recoverer)
+	//middleware callstack
+	r.Use(middleware.Recoverer)
+	
+	
 	// // Routes
 	// router.Get("/", Test(log, db))
 	// router.Post("/user/create", Register(log, db))
@@ -65,19 +87,25 @@ func main() {
 	// router.Post("/user/follower/add/{id}", AddFollower(log, db))
 	// router.Post("/user/follower/remove/{id}", RemoveFollower(log,db))
 	// r.Post("/user/delete", routes.DeleteUser)
-	
+	 
+	router.Mount("/api", r)
 
-	// r.Mount("/api", router)
-	// log.Infof(
-	// 	"Libra Version: %s | Listening on port:%s | Time: %s",
-	// 	Version,
-	// 	Port,
-	// 	time.Now().In(loc),
-	// )
-	// err = http.ListenAndServe(":"+Port, r)
-	// if err != nil {
+	 logrus.Infof(
+	 	"\n Libra Version: %s\n Listening on port:%s\n Current Time: %s",
+	 	Version,
+	 	Port,
+	 	time.Now().In(loc),
+	 )
 
-	// 	log.Panicf("Server launch error", err.Error())
-	// 	panic("Server launch error")
-	// }
+	server := &http.Server{
+		Addr:         ":" + Port,
+		ReadTimeout:  time.Second * 30,
+		WriteTimeout: time.Second * 30,
+	}
+
+	err := server.ListenAndServe()
+	if err != nil {
+		logrus.Panicf("Server launch error: %v", err)
+		panic("Server launch error")
+	}
 }

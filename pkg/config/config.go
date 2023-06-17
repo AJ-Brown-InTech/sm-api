@@ -6,11 +6,15 @@ import (
 	
 )
 
-type Config struct {
-    Env      string
-    Database DatabaseConfig
-    Server   ServerConfig
-    Version  VersionConfig
+type Config struct { 
+	Enviroment  EnvironmentConfig
+    Database 	DatabaseConfig
+    Server   	ServerConfig
+    Version  	VersionConfig
+}
+
+type EnvironmentConfig struct {
+	Env string `mapstructure:"env"`
 }
 
 type DatabaseConfig struct {
