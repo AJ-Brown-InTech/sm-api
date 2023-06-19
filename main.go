@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/AJ-Brown-InTech/sm-api/pkg/config"
+	"github.com/AJ-Brown-InTech/sm-api/pkg/database"
+	"github.com/akyoto/cache"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
-
 	// "github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
@@ -21,7 +22,7 @@ var (
 )
 
 type Middleware interface{
-	ProccessMiddleware(args any) (http.Handler, error)
+	ProccessMiddleware(args ...any) (http.Handler, error)
 }
 
 type RequestMiddleware struct {
@@ -40,7 +41,6 @@ func(r RequestMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.Handle
 		if rd.TracerId == "" {
 			rd.TracerId = uuid.New().String()
 		}
-
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "TracerId", rd.TracerId)))
 	}), nil
 }
@@ -51,15 +51,15 @@ func(s SessionMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.Handle
 	}), nil
 } 
 
+var GLOBAL_CACHE  *cache.Cache
+
 type localCache struct {
 	Token SessionMiddleware
 }
 
 
 
-
-
-func init() { // could throw error if running test
+func init() { // ! could throw error if running test
 
 	file, err := config.SetupEnv()
 	if err != nil {
@@ -81,11 +81,27 @@ func init() { // could throw error if running test
 	}
 }
 
-//Todo: add cache & db
 func main() {
 	
 	loc, _ := time.LoadLocation("America/Chicago")
 
+	//db initialization
+	db, err := database.DatabaseInstance(DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE)
+	if err != nil {
+		logrus.Fatalf("Could not initialize database, %v", err)
+		return 
+	}
+	err = db.Ping()
+	if err != nil {
+		logrus.Fatalf("Could not connect to database, %v", err)
+		return
+	}
+
+	// GLOBAL CACHE
+	c := cache.New(time.Hour * 1)
+	GLOBAL_CACHE = c
+
+	
 	// router initialization
 	r := chi.NewRouter() 
 	router := chi.NewRouter()
