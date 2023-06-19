@@ -1,16 +1,19 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/AJ-Brown-InTech/sm-api/pkg/config"
-	 "github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
+
 	// "github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
-	
+	//"github.com/akyoto/cache"
 )
 
 var (
@@ -23,7 +26,7 @@ type Middleware interface{
 
 type RequestMiddleware struct {
 	TracerId string
-	FromRoute string
+	From string
 }
 
 type SessionMiddleware struct {
@@ -32,8 +35,13 @@ type SessionMiddleware struct {
 }
 
 func(r RequestMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.HandlerFunc, error) {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		next.ServeHTTP(w, req)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rd := RequestMiddleware{}
+		if rd.TracerId == "" {
+			rd.TracerId = uuid.New().String()
+		}
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "TracerId", rd.TracerId)))
 	}), nil
 }
 
@@ -41,7 +49,15 @@ func(s SessionMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.Handle
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		next.ServeHTTP(w, req)
 	}), nil
+} 
+
+type localCache struct {
+	Token SessionMiddleware
 }
+
+
+
+
 
 func init() { // could throw error if running test
 

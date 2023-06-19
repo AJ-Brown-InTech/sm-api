@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"time"
 	"github.com/jmoiron/sqlx"
-	
 )
 
 func DatabaseInstance(hostname, port, user, password, dbname string)(*sqlx.DB, error){
@@ -33,6 +32,6 @@ connectionStr := fmt.Sprintf(`port=%s user=%s password=%s dbname=%s host=%s sslm
 	 	return nil,err
 	 }
 
-	logrus.Info("Postgres database connection established") 
+	logrus.Info("Postgres database connection established successfully") 
 	return db, nil
 }
