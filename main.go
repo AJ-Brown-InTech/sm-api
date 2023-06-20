@@ -5,11 +5,9 @@ import (
 	"encoding/base64"
 	"net/http"
 	"time"
-
 	"github.com/AJ-Brown-InTech/sm-api/pkg/config"
 	"github.com/AJ-Brown-InTech/sm-api/pkg/database"
-
-	//"github.com/AJ-Brown-InTech/sm-api/pkg/router"
+api	"github.com/AJ-Brown-InTech/sm-api/pkg/router"
 	"github.com/akyoto/cache"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -134,7 +132,7 @@ func init() { // ! could throw error if running test
 
 
 func main() {
-	
+
 	loc, _ := time.LoadLocation("America/Chicago")
 
 	//db initialization
@@ -151,7 +149,7 @@ func main() {
 
 	// Global Cache
 	c := cache.New(time.Hour * 1)
-	GlobalCache = c
+	GlobalCache = c 
 
 	// router initialization
 	r := chi.NewRouter() 
@@ -164,9 +162,8 @@ func main() {
 
 	// Routes
 	//TODO : login & register ar not protected routes
-
-	// r.Post("/user/", h.Register(db, c))
-	//  r.Post("/user/login", handle.UserLogin(db, c))
+	r.Post("/user/", api.Register(db, c))
+	//r.Post("/user/login", api.UserLogin(db, c))
 	//  r.Get("/user/profile/{id}", handle.GetUserBySessionId(db, c))
 	//  r.Post("/user/update/{id}", handle.UpdateUser(db, c))
 	//  r.Post("/user/follower/add/{id}", handle.AddFollower(db, c))

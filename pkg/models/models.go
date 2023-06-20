@@ -13,9 +13,10 @@ type Login struct {
 }
 
 type User struct {
+	UserId string 
 	Username   			string       `json:"username" db:"username" required:max=225`
 	Email      			string       `json:"email" db:"email" required:"true"`
-	Password   			string       `json:"password" db:"password" required:"true"`
+	Password   			string       `json:"user_password" db:"User_password" required:"true"`
 	FirstName  			string `json:"fullname" db:"fullname"`
 	LastName   			string  `json:"fullname" db:"fullname"`
 	Bio        			string  `json:"bio" db:"bio"`
