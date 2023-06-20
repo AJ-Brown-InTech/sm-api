@@ -2,61 +2,111 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
 	"time"
 
 	"github.com/AJ-Brown-InTech/sm-api/pkg/config"
 	"github.com/AJ-Brown-InTech/sm-api/pkg/database"
+
+	//"github.com/AJ-Brown-InTech/sm-api/pkg/router"
 	"github.com/akyoto/cache"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
-	// "github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
-	//"github.com/akyoto/cache"
 )
 
 var (
 	Port, Environment, Version, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_DATABASE string
 )
+var GlobalCache  *cache.Cache
 
-type Middleware interface{
-	ProccessMiddleware(args ...any) (http.Handler, error)
-}
-
-type RequestMiddleware struct {
-	TracerId string
+type Request struct {
+	TraceId string
 	From string
 }
 
-type SessionMiddleware struct {
-	SessionToken string
-	SessionExpiration string
+type Session struct {
+	Token string
+	Expiration string
 }
 
-func(r RequestMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.HandlerFunc, error) {
+func RequestMiddlware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rd := RequestMiddleware{}
-		if rd.TracerId == "" {
-			rd.TracerId = uuid.New().String()
+		rd := Request{}
+		rd.From = r.Header.Get("Request")
+		rd.TraceId = r.Header.Get("Trace")
+		if rd.TraceId == "" {
+			rd.TraceId = uuid.New().String()
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "TracerId", rd.TracerId)))
-	}), nil
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "Request", rd)))
+	})
 }
 
-func(s SessionMiddleware) ProccessMiddleware(next http.HandlerFunc) (http.HandlerFunc, error) {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		next.ServeHTTP(w, req)
-	}), nil
-} 
+func SessionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rd := r.Context().Value("Request").(Request) 
 
-var GLOBAL_CACHE  *cache.Cache
+		sessionID, found := GlobalCache.Get("session_id")
+		if !found {
+			logrus.WithFields(logrus.Fields{"Request": rd, "Error": "user session is not present"})
+			http.Error(w, "user session is not present", http.StatusInternalServerError)
+			return
+		}
 
-type localCache struct {
-	Token SessionMiddleware
+		session, ok := sessionID.(*Session)
+		if !ok {
+			logrus.WithFields(logrus.Fields{"RequestData": rd}).Error("Invalid session data in cache")
+			http.Error(w, "Invalid session data in cache", http.StatusInternalServerError)
+			return
+		}
+
+		userEmail, err := base64.StdEncoding.DecodeString(session.Token)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{"RequestData": rd, "Error": err.Error()}).Error("Session token decryption failed")
+			http.Error(w, "Session token decryption failed", http.StatusInternalServerError)
+			return
+		}
+
+		logrus.Infof("Session valid for %s", userEmail)
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "session_id", &session)))
+	})
 }
 
+// func GetCurrentSession(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		rd := r.Context().Value("RequestData").(RequestData)
+// 		// check the user cache
+// 		sessionId, found := c.Get("session_id")
+// 		if !found {
+// 			logrus.WithFields(logrus.Fields{"RequestData": rd, "Error": "No user session available, create a new user session"}).Error("No user session available, create a new user session")
+// 			http.Error(w, "No user session available, create a new user session", http.StatusInternalServerError)
+// 			return
+// 		}
+// 		session, ok := sessionId.(*authentication.Session)
+// 		if !ok {
+// 			logrus.WithFields(logrus.Fields{"RequestData": rd}).Error("Invalid session data in cache")
+// 			http.Error(w, "Invalid session data in cache", http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		logrus.WithFields(logrus.Fields{"RequestData": rd}).Infof("Successfully fetched user session")
+
+// 		w.Header().Set("Content-Type", "application/json")
+// 		w.WriteHeader(http.StatusOK)
+// 		err := json.NewEncoder(w).Encode(session)
+// 		if err != nil {
+// 			logrus.WithFields(logrus.Fields{
+// 				"RequestData": rd,
+// 				"Error":       err,
+// 			}).Error("Error writing response")
+// 			http.Error(w, err.Error(), http.StatusInternalServerError)
+// 			return
+// 		}
+// 	}
+// }
 
 
 func init() { // ! could throw error if running test
@@ -81,6 +131,8 @@ func init() { // ! could throw error if running test
 	}
 }
 
+
+
 func main() {
 	
 	loc, _ := time.LoadLocation("America/Chicago")
@@ -97,28 +149,29 @@ func main() {
 		return
 	}
 
-	// GLOBAL CACHE
+	// Global Cache
 	c := cache.New(time.Hour * 1)
-	GLOBAL_CACHE = c
+	GlobalCache = c
 
-	
 	// router initialization
 	r := chi.NewRouter() 
 	router := chi.NewRouter()
 
 	//middleware callstack
 	r.Use(middleware.Recoverer)
-	
-	
-	// // Routes
-	// router.Get("/", Test(log, db))
-	// router.Post("/user/create", Register(log, db))
-	// router.Post("/user/login", UserLogin(log, db))
-	// router.Get("/user/profile/{id}", GetUserBySessionId(log, db))
-	// router.Post("/user/update/{id}", UpdateUser(log, db))
-	// router.Post("/user/follower/add/{id}", AddFollower(log, db))
-	// router.Post("/user/follower/remove/{id}", RemoveFollower(log,db))
-	// r.Post("/user/delete", routes.DeleteUser)
+	r.Use(RequestMiddlware)
+	r.Use(SessionMiddleware)
+
+	// Routes
+	//TODO : login & register ar not protected routes
+
+	// r.Post("/user/", h.Register(db, c))
+	//  r.Post("/user/login", handle.UserLogin(db, c))
+	//  r.Get("/user/profile/{id}", handle.GetUserBySessionId(db, c))
+	//  r.Post("/user/update/{id}", handle.UpdateUser(db, c))
+	//  r.Post("/user/follower/add/{id}", handle.AddFollower(db, c))
+	//  r.Post("/user/follower/remove/{id}", handle.RemoveFollower(db, c))
+	 //r.Post("/user/delete", handle.DeleteUser)
 	 
 	router.Mount("/api", r)
 
@@ -135,7 +188,7 @@ func main() {
 		WriteTimeout: time.Second * 30,
 	}
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		logrus.Panicf("Server launch error: %v", err)
 		panic("Server launch error")

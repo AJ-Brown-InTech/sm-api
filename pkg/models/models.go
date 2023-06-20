@@ -2,7 +2,7 @@ package main
 
 import (
 	"time"
-
+	//"github.com/go-playground/validator/v10"
 	"gopkg.in/guregu/null.v3"
 )
 
@@ -13,25 +13,24 @@ type Login struct {
 }
 
 type User struct {
-	Key        string       `json:"share_key" db:"share_key"`
-	Username   string       `json:"username" db:"username" required:"true"`
-	Email      string       `json:"email" db:"email" required:"true"`
-	Password   string       `json:"password" db:"password" required:"true"`
-	FullName   null.String  `json:"fullname" db:"fullname"`
-	Bio        null.String  `json:"bio" db:"bio"`
-	WhoAreYou  null.String  `json:"whoareyou" db:"whoareyou"`
-	Avatar     null.Int     `json:"avatar" db:"avatar"`
-	AccountRating float64   `json:"account_rating" db:"account_rating"`
-	PostRating float64      `json:"post_rating" db:"post_rating"`
-	FollowerCount int       `json:"follower_count" db:"follower_count"`
-	FollowingCount int     `json:"following_count" db:"following_count"`
-	PostCount  int          `json:"post_count" db:"post_count"`
-	Location   null.String `json:"location" db:"location"`
-	SessionId  null.String `json:"session_id" db:"session_id"`
-	Birthday   string      `json:"birthday" db:"birthday" required:"true"`
-	UpdatedAt  string      `json:"updated_at" db:"updated_at"`
-	CreatedAt  string      `json:"created_at" db:"created_at"`
-	Active     bool         `json:"active" db:"active"`
+	Username   			string       `json:"username" db:"username" required:max=225`
+	Email      			string       `json:"email" db:"email" required:"true"`
+	Password   			string       `json:"password" db:"password" required:"true"`
+	FirstName  			string `json:"fullname" db:"fullname"`
+	LastName   			string  `json:"fullname" db:"fullname"`
+	Bio        			string  `json:"bio" db:"bio"`
+	Avatar     			int     `json:"avatar" db:"avatar"`
+	AccountRating 		float64   `json:"account_rating" db:"account_rating"`
+	RunningPointCount 	float64      `json:"post_rating" db:"post_rating"`
+	FollowerCount  		int       `json:"follower_count" db:"follower_count"`
+	FollowingCount 		int     `json:"following_count" db:"following_count"`
+	PostCount  			int          `json:"post_count" db:"post_count"`
+	Location     		string `json:"location" db:"location"`
+	SessionToken 		string     `json:"session_id" db:"session_id"`
+	Birthday   			string      `json:"birthday" db:"birthday" required:"true"`
+	UpdatedAt  			string      `json:"updated_at" db:"updated_at"`
+	CreatedAt  			string      `json:"created_at" db:"created_at"`
+	Active     			bool         `json:"active" db:"active"`
 }
 
 type Followers struct {
