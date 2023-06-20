@@ -5,6 +5,5 @@ run:
 	go mod download
 	go run .
 
-db:
-	docker build -t my-postgres .
-	docker run -p 5432:5432 --name my-postgres-container -d my-postgres
+run-docker:
+	docker-compose up -d --force-recreate --quiet-pull 

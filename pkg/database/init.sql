@@ -87,6 +87,7 @@ CREATE TABLE tags (
 CREATE TABLE post_tags (
     post_id SERIAL REFERENCES posts (post_id),
     tag_id SERIAL REFERENCES tags (tag_id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
     PRIMARY KEY (post_id, tag_id)
 );
 
