@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"time"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 func DatabaseInstance(hostname, port, user, password, dbname string)(*sqlx.DB, error){
@@ -27,10 +28,10 @@ connectionStr := fmt.Sprintf(`port=%s user=%s password=%s dbname=%s host=%s sslm
 	db.SetConnMaxIdleTime(30 * time.Second)
 
 
-	 if err := db.Ping(); err != nil{
-		logrus.Errorf("Failed to ping db: %v", err)
-	 	return nil,err
-	 }
+	//  if err := db.Ping(); err != nil{
+	// 	logrus.Errorf("Failed to ping db: %v", err)
+	//  	return nil,err
+	//  }
 
 	logrus.Info("Postgres database connection established successfully") 
 	return db, nil

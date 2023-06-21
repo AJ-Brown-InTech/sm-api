@@ -1,9 +1,9 @@
 clean:
-	find . -name '*.go' -exec gofmt -w {} \;
+	sudo find . -name '*.go' -exec gofmt -w {} \;
 
 run:
-	go mod download
-	go run .
+	sudo go mod download
+	sudo go run .
 
 run-docker:
-	docker-compose up -d --force-recreate --quiet-pull 
+	sudo docker compose up -d --force-recreate --quiet-pull 

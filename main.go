@@ -7,6 +7,7 @@ import (
 	"time"
 	"github.com/AJ-Brown-InTech/sm-api/pkg/config"
 	"github.com/AJ-Brown-InTech/sm-api/pkg/database"
+m   "github.com/AJ-Brown-InTech/sm-api/pkg/models"
 api	"github.com/AJ-Brown-InTech/sm-api/pkg/router"
 	"github.com/akyoto/cache"
 	"github.com/go-chi/chi/v5"
@@ -18,21 +19,12 @@ api	"github.com/AJ-Brown-InTech/sm-api/pkg/router"
 var (
 	Port, Environment, Version, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_DATABASE string
 )
+
 var GlobalCache  *cache.Cache
-
-type Request struct {
-	TraceId string
-	From string
-}
-
-type Session struct {
-	Token string
-	Expiration string
-}
 
 func RequestMiddlware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rd := Request{}
+		rd := m.Request{}
 		rd.From = r.Header.Get("Request")
 		rd.TraceId = r.Header.Get("Trace")
 		if rd.TraceId == "" {
@@ -44,7 +36,7 @@ func RequestMiddlware(next http.Handler) http.Handler {
 
 func SessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rd := r.Context().Value("Request").(Request) 
+		rd := r.Context().Value("Request").(m.Request) 
 
 		sessionID, found := GlobalCache.Get("session_id")
 		if !found {
@@ -53,7 +45,7 @@ func SessionMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		session, ok := sessionID.(*Session)
+		session, ok := sessionID.(*m.Session)
 		if !ok {
 			logrus.WithFields(logrus.Fields{"RequestData": rd}).Error("Invalid session data in cache")
 			http.Error(w, "Invalid session data in cache", http.StatusInternalServerError)
@@ -162,7 +154,7 @@ func main() {
 
 	// Routes
 	//TODO : login & register ar not protected routes
-	r.Post("/user/", api.Register(db, c))
+	r.Post("/user/", api.RegisterUserAccount(db, c))
 	//r.Post("/user/login", api.UserLogin(db, c))
 	//  r.Get("/user/profile/{id}", handle.GetUserBySessionId(db, c))
 	//  r.Post("/user/update/{id}", handle.UpdateUser(db, c))

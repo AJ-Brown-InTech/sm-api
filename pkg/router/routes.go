@@ -4,104 +4,117 @@ import (
 	//"encoding/base64"
 	//"encoding/json"
 	//"fmt"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
-	//"time"
-	//"github.com/go-playground/validator/v10"
-	//m "github.com/AJ-Brown-InTech/sm-api/pkg/models"
-	//sq "github.com/Masterminds/squirrel"
+	"time"
+	m "github.com/AJ-Brown-InTech/sm-api/pkg/models"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+
+	sq "github.com/Masterminds/squirrel"
 	"github.com/akyoto/cache"
+
 	//"github.com/go-chi/chi/v5"
 	//"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	//"github.com/sirupsen/logrus"
 )
 
-func Register(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
+func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
+	validation := validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {
-		// var newUser User
-		// d := json.NewDecoder(r.Body)
-		// d.DisallowUnknownFields()
-		// err := d.Decode(&newUser)
-		// if err != nil {
-		// 	logrus.Errorf("Error: %v", err.Error())
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
-		// validate data
-		// switch {
-		// case len(newUser.Username) > 15:
-		// 	logrus.Error("username too long")
-		// 	http.Error(w, "username too long", http.StatusBadRequest)
-		// 	return
-		// case len(newUser.Username) < 6:
-		// 	z.Error("username too short")
-		// 	http.Error(w, "username too short", http.StatusBadRequest)
-		// 	return
-		// default:
-		// 	z.Info("username valid")
-		// }
-		// verify := emailverifier.NewVerifier()
-		// res, _ := verify.Verify(newUser.Email)
-		// if !res.Syntax.Valid {
-		// 	z.Error("email not valid")
-		// 	http.Error(w, "email not valid", http.StatusBadRequest)
-		// 	return
-		// }
-		// if len(newUser.Password) < 18 {
-		// 	z.Errorf("Error: the password needs to be 12 characters minimum")
-		// 	http.Error(w, "the password needs to be 12 characters minimum", http.StatusBadRequest)
-		// 	return
-		// }
+		rd := r.Context().Value("Request").(m.Request)
 
-		
-		//encodedPassword := base64.StdEncoding.EncodeToString([]byte(newUser.Password))
-		// create a session and store with other data
-		// sessionID := uuid.New().String()
-		// query := fmt.Sprintf(
-		// 	`INSERT INTO users(username, email, password, fullname, bio, whoareyou, avatar, account_rating, post_rating, follower_count, following_count, post_count, location, session_id, birthday, updated_at, created_at, active)
-		// 	VALUES ('%s', '%s', '%s', '%s', '%s', '%s', %v, %f, %f, %d, %d, %d, '%s', '%s', '%s', '%v', '%v', %t)`,
-		// 	newUser.Username,
-		// 	newUser.Email,
-		// 	encodedPassword,
-		// 	newUser.FullName.String,
-		// 	newUser.Bio.String,
-		// 	newUser.WhoAreYou.String,
-		// 	newUser.Avatar,
-		// 	newUser.AccountRating,
-		// 	newUser.PostRating,
-		// 	newUser.FollowerCount,
-		// 	newUser.FollowingCount,
-		// 	newUser.PostCount,
-		// 	newUser.Location.String,
-		// 	sessionID,
-		// 	newUser.Birthday,
-		// 	time.Now(),
-		// 	time.Now(),
-		// 	newUser.Active,
-		// )
-		
-		// INSERT INTO users(username, email, password, rating, birthday, session_id) VALUES ('JohnDoe123', 'johndoe@example.com', 'mypassword123', 0, '1996-03-05 00:00:00 +0000 UTC', 'eb2249c7-c7ae-4cb2-a3de-d600cb6e0a51')
+		var user m.User
+		err := json.NewDecoder(r.Body).Decode(&user)
+		if err !=  nil {
+			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error reading in request body")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-		// _, err = db.Exec(query)
-		// if err != nil {
-		// 	z.Errorf("Error: creating user: %v", err.Error())
-		// 	http.Error(w, "error creating user", http.StatusInternalServerError)
-		// 	return
-		// }
+		err = validation.Struct(&user)
+		if err !=  nil {
+			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error validating the request body")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-		// // return the session_id
-		// type Session struct {
-		// 	ID string `json:"session_id"`
-		// }
-		// result := Session{ID: sessionID}
-		// w.Header().Set("Content-type", "application/json")
-		// w.WriteHeader(http.StatusOK)
-		// err = json.NewEncoder(w).Encode(&result)
-		// if err != nil {
-		// 	z.Error("Error writing response")
-		// 	http.Error(w, "error writing respondse", http.StatusInternalServerError)
-		// 	return
-		// }
+		// user account assignment before insertion 
+		user.UserId = uuid.New().String()
+		user.AccountRating = 0
+		user.RunningPointCount = 0
+		user.FollowerCount = 0
+		user.FollowingCount = 0
+		user.UpdatedAt = time.Now()
+		user.CreatedAt = time.Now()
+
+		// insert record into database
+		stmtBuilder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).RunWith(db)
+		insertStatement := stmtBuilder.Insert("users").Columns(
+			"user_id",
+			"username",
+			"email",
+			"User_password",
+			"first_name",
+			"last_name",
+			"bio",
+			"avatar",
+			"account_rating",
+			"running_point_count",
+			"follower_count",
+			"following_count",
+			"location",
+			"birthday",
+			"city",
+			"country",
+			"state_province",
+			"updated_at",
+			"created_at",
+			"active",
+		).Values(
+			user.UserId,
+			user.Username,
+			user.Email,
+			base64.StdEncoding.EncodeToString([]byte(user.Password)),
+			user.FirstName,
+			user.LastName,
+			user.Bio,
+			user.Avatar,
+			user.AccountRating,
+			user.RunningPointCount,
+			user.FollowerCount,
+			user.FollowingCount,
+			user.Location,
+			user.Birthday,
+			user.City,
+			user.Country,
+			user.StateProvince,
+			time.Now(),
+			time.Now(),
+			user.Active,
+		)
+		_, err = insertStatement.Exec()
+		if err !=  nil {
+			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error inserting new user record into database")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// store a cache of the user record in the gloabl cache
+		c.Set("session_id", uuid.New().String(), time.Hour * 36) //! add session token to db
+		// return the created user 
+
+		logrus.Infof("created user successfully created")
+		w.WriteHeader(http.StatusCreated)
+		err = json.NewEncoder(w).Encode(&user)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error writing response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
