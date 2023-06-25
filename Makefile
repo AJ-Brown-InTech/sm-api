@@ -6,4 +6,4 @@ run:
 	sudo go run .
 
 run-docker:
-	sudo docker compose up -d --force-recreate --quiet-pull 
+	docker compose up -d --force-recreate --quiet-pull 

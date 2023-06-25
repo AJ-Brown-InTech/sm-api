@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
-    user_id uuid PRIMARY KEY,
-    username TEXT UNIQUE not null unique,
+    user_id UUID PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     user_password TEXT NOT NULL,
     first_name TEXT,
@@ -10,28 +10,28 @@ CREATE TABLE IF NOT EXISTS users (
     account_rating REAL,
     real_rating_number REAL,
     rating_average REAL,
-	follower_count INTEGER default 0,
-	following_count INTEGER default 0,
-	location point,
+    follower_count INTEGER DEFAULT 0,
+    following_count INTEGER DEFAULT 0,
+    location POINT,
     birthday TEXT NOT NULL,
     city TEXT,
     country TEXT,
     state_province TEXT,
     updated_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    active boolean DEFAULT true, 
-    verified boolean DEFAULT false
+    active BOOLEAN DEFAULT true, 
+    verified BOOLEAN DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS followers (
-    follower TEXT,
-    followed TEXT,
-    created_at TEXT,
-    FOREIGN KEY (follower) REFERENCES users (user_id) ON DELETE CASC,
-    FOREIGN KEY (followed) REFERENCES users (user_id) ON DELETE CASC
+    follower UUID,
+    followed UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    FOREIGN KEY (follower) REFERENCES users (user_id),
+    FOREIGN KEY (followed) REFERENCES users (user_id)
 );
 
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     post_id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users (user_id),
     caption VARCHAR,
@@ -42,19 +42,17 @@ CREATE TABLE posts (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-
-CREATE TABLE comments (
+CREATE TABLE IF NOT EXISTS comments (
     comment_id SERIAL PRIMARY KEY,
-     user_id UUID REFERENCES users (user_id),
+    user_id UUID REFERENCES users (user_id),
     post_id SERIAL REFERENCES posts (post_id),
     caption VARCHAR,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW()
-    )
+);
 
-
-CREATE TABLE post_rating ( -- equivalent to a likes tb ininstagram
-    post_rating_id serial primary key,
+CREATE TABLE IF NOT EXISTS postrating ( 
+    post_rating_id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users (user_id),
     post_id SERIAL REFERENCES posts (post_id),
     post_rating REAL,
@@ -62,7 +60,7 @@ CREATE TABLE post_rating ( -- equivalent to a likes tb ininstagram
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     message_id SERIAL PRIMARY KEY,
     sender_id UUID REFERENCES users (user_id),
     receiver_id UUID REFERENCES users (user_id),
@@ -71,7 +69,7 @@ CREATE TABLE messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE ratings (
+CREATE TABLE IF NOT EXISTS ratings (
     rating_id SERIAL PRIMARY KEY,
     rater_id UUID REFERENCES users (user_id),
     rated_id UUID REFERENCES users (user_id),
@@ -79,19 +77,19 @@ CREATE TABLE ratings (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
     tag_id SERIAL PRIMARY KEY,
     tag_name TEXT
 );
 
-CREATE TABLE post_tags (
+CREATE TABLE IF NOT EXISTS post_tags (
     post_id SERIAL REFERENCES posts (post_id),
     tag_id SERIAL REFERENCES tags (tag_id),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (post_id, tag_id)
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     notification_id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users (user_id),
     notification_type TEXT,

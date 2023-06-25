@@ -4,11 +4,11 @@ ENVIROMENT:
 SERVER:
   port: 8080
 DATABASE:
-  host:  0.0.0.0 #127.0. 0.1 #example.host.db
-  port: 5342
-  username: user
+  host:  localhost #127.0. 0.1 #example.host.db
+  port: 9000
+  username: postgres
   password: password
-  dbname : database
-  max_connections: 10
+  dbname : libre
+  max_connections: 100
 VERSION:
   release: 0.0.1

@@ -133,6 +133,7 @@ func main() {
 		logrus.Fatalf("Could not initialize database, %v", err)
 		return 
 	}
+	logrus.Infof("TEst %v, %v, %v, %v, %v:", DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE) 
 	err = db.Ping()
 	if err != nil {
 		logrus.Fatalf("Could not connect to database, %v", err)
