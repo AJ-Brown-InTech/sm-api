@@ -133,7 +133,7 @@ func main() {
 		logrus.Fatalf("Could not initialize database, %v", err)
 		return 
 	}
-	logrus.Infof("TEst %v, %v, %v, %v, %v:", DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE) 
+
 	err = db.Ping()
 	if err != nil {
 		logrus.Fatalf("Could not connect to database, %v", err)
@@ -162,7 +162,6 @@ func main() {
 	//  r.Post("/user/follower/add/{id}", handle.AddFollower(db, c))
 	//  r.Post("/user/follower/remove/{id}", handle.RemoveFollower(db, c))
 	 //r.Post("/user/delete", handle.DeleteUser)
-	 
 	router.Mount("/api", r)
 
 	 logrus.Infof(
