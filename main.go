@@ -12,7 +12,7 @@ api	"github.com/AJ-Brown-InTech/sm-api/pkg/router"
 	"github.com/akyoto/cache"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/google/uuid"
+	//"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,17 +22,7 @@ var (
 
 var GlobalCache  *cache.Cache
 
-func RequestMiddlware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rd := m.Request{}
-		rd.From = r.Header.Get("Request")
-		rd.TraceId = r.Header.Get("Trace")
-		if rd.TraceId == "" {
-			rd.TraceId = uuid.New().String()
-		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "Request", rd)))
-	})
-}
+
 
 func SessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -145,17 +135,18 @@ func main() {
 	GlobalCache = c 
 
 	// router initialization
-	r := chi.NewRouter() 
 	router := chi.NewRouter()
+	r := chi.NewRouter() 
+	
 
 	//middleware callstack
-	r.Use(middleware.Recoverer)
-	r.Use(RequestMiddlware)
+	router.Use(middleware.Recoverer)
+	router.Use(m.RequestMiddlware)
 	r.Use(SessionMiddleware)
 
 	// Routes
 	//TODO : login & register ar not protected routes
-	r.Post("/user/", api.RegisterUserAccount(db, c))
+	router.Post("/user", api.RegisterUserAccount(db, c))
 	//r.Post("/user/login", api.UserLogin(db, c))
 	//  r.Get("/user/profile/{id}", handle.GetUserBySessionId(db, c))
 	//  r.Post("/user/update/{id}", handle.UpdateUser(db, c))
@@ -172,7 +163,8 @@ func main() {
 	 )
 
 	server := &http.Server{
-		Addr:         ":" + Port,
+		Handler: router,
+		Addr:         "0.0.0.0:" + Port,
 		ReadTimeout:  time.Second * 30,
 		WriteTimeout: time.Second * 30,
 	}

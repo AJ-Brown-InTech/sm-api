@@ -6,9 +6,11 @@ import (
 	//"fmt"
 	"encoding/base64"
 	"encoding/json"
+	
 	"net/http"
 	"time"
-	m "github.com/AJ-Brown-InTech/sm-api/pkg/models"
+
+	"github.com/AJ-Brown-InTech/sm-api/pkg/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -25,16 +27,24 @@ import (
 func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 	validation := validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {
-		rd := r.Context().Value("Request").(m.Request)
+		rd := r.Context().Value("Request").(models.Request)
 
-		var user m.User
-		err := json.NewDecoder(r.Body).Decode(&user)
+		var user models.User
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		err := dec.Decode(&user)
 		if err !=  nil {
 			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error reading in request body")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		// user account assignment before validation & insertion
+		user.UserId = uuid.New().String()
+		user.UpdatedAt = time.Now()
+		user.CreatedAt = time.Now()
+		
+		// validate
 		err = validation.Struct(&user)
 		if err !=  nil {
 			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error validating the request body")
@@ -42,38 +52,17 @@ func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 			return
 		}
 
-		// user account assignment before insertion 
-		user.UserId = uuid.New().String()
-		user.AccountRating = 0
-		user.RunningPointCount = 0
-		user.FollowerCount = 0
-		user.FollowingCount = 0
-		user.UpdatedAt = time.Now()
-		user.CreatedAt = time.Now()
-
 		// insert record into database
 		stmtBuilder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).RunWith(db)
 		insertStatement := stmtBuilder.Insert("users").Columns(
 			"user_id",
 			"username",
 			"email",
-			"User_password",
+			"user_password",
 			"first_name",
 			"last_name",
-			"bio",
-			"avatar",
-			"account_rating",
-			"running_point_count",
-			"follower_count",
-			"following_count",
-			"location",
-			"birthday",
-			"city",
-			"country",
-			"state_province",
 			"updated_at",
 			"created_at",
-			"active",
 		).Values(
 			user.UserId,
 			user.Username,
@@ -81,20 +70,8 @@ func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 			base64.StdEncoding.EncodeToString([]byte(user.Password)),
 			user.FirstName,
 			user.LastName,
-			user.Bio,
-			user.Avatar,
-			user.AccountRating,
-			user.RunningPointCount,
-			user.FollowerCount,
-			user.FollowingCount,
-			user.Location,
-			user.Birthday,
-			user.City,
-			user.Country,
-			user.StateProvince,
-			time.Now(),
-			time.Now(),
-			user.Active,
+			user.UpdatedAt,
+			user.CreatedAt,
 		)
 		_, err = insertStatement.Exec()
 		if err !=  nil {
@@ -103,11 +80,18 @@ func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 			return
 		}
 
-		// store a cache of the user record in the gloabl cache
-		c.Set("session_id", uuid.New().String(), time.Hour * 36) //! add session token to db
-		// return the created user 
+		// create a session token
+		session := models.Session{
+			Token: base64.StdEncoding.EncodeToString([]byte(user.UserId)),
+			Expiration: time.Now().Add(24 * time.Hour),
+		}
 
-		logrus.Infof("created user successfully created")
+		// store a cache of the user record in the gloabl cache
+		c.Set("session_id", &session, 24 * time.Hour) //! add session token to db
+
+		logrus.Infof("Successfully created a user account")
+
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		err = json.NewEncoder(w).Encode(&user)
 		if err != nil {

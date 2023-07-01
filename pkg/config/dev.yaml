@@ -2,7 +2,7 @@
 ENVIROMENT: 
   env: development
 SERVER:
-  port: 8080
+  port: 80
 DATABASE:
   host:  localhost #127.0. 0.1 #example.host.db
   port: 9000

@@ -5,5 +5,5 @@ run:
 	sudo go mod download
 	sudo go run .
 
-run-docker:
+run-d:
 	docker compose up -d --force-recreate --quiet-pull 
