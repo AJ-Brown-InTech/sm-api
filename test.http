@@ -1,12 +1,24 @@
-  POST http://localhost:80/user
+
+//GET http://localhost:80/test
+
+  # POST http://localhost:80/user
     
-  {
-      "username": "TestAcc123",
-      "email": "123@example.com",
-      "user_password": "mypassword123456789123",
-      "first_name" : "TestAccount",
-      "last_name" : "TestAccount"  
-  }
+  # {
+  #     "username": "TestAcc123",
+  #     "email": "123@example.com",
+  #     "user_password": "mypassword123456789123",
+  #     "first_name" : "TestAccount",
+  #     "last_name" : "TestAccount"  
+  # }
+
+
+   POST http://localhost:80/login
+    
+   {
+       "username": "TestAcc123",
+       "email": "123@example.com",
+       "user_password": "mypassword123456789123"
+   }
 
 #GET http://localhost/api/user/profile/fa8ce5eb-9950-40fb-98b7-9660e610d3ce
 

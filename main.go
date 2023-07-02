@@ -13,6 +13,8 @@ api	"github.com/AJ-Brown-InTech/sm-api/pkg/router"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	//"github.com/google/uuid"
+	//"github.com/rs/cors"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -111,8 +113,6 @@ func init() { // ! could throw error if running test
 	}
 }
 
-
-
 func main() {
 
 	loc, _ := time.LoadLocation("America/Chicago")
@@ -137,9 +137,16 @@ func main() {
 	// router initialization
 	router := chi.NewRouter()
 	r := chi.NewRouter() 
-	
+
+	// corsHandler := cors.New(cors.Options{
+    //     AllowedOrigins:   []string{"*"}, // Change this to restrict allowed origins
+    //     AllowedHeaders:   []string{"*"}, // Change this to restrict allowed headers
+    //     AllowCredentials: true,
+    //     //MaxAge:           300, // Cache the preflight response for 5 minutes
+    // })
 
 	//middleware callstack
+	//router.Use(corsHandler.Handler)
 	router.Use(middleware.Recoverer)
 	router.Use(m.RequestMiddlware)
 	r.Use(SessionMiddleware)
@@ -147,7 +154,8 @@ func main() {
 	// Routes
 	//TODO : login & register ar not protected routes
 	router.Post("/user", api.RegisterUserAccount(db, c))
-	//r.Post("/user/login", api.UserLogin(db, c))
+	router.Get("/test", api.Test(db, c))
+	router.Post("/login", api.UserLogin(db, c))
 	//  r.Get("/user/profile/{id}", handle.GetUserBySessionId(db, c))
 	//  r.Post("/user/update/{id}", handle.UpdateUser(db, c))
 	//  r.Post("/user/follower/add/{id}", handle.AddFollower(db, c))
