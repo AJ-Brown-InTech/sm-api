@@ -138,24 +138,26 @@ func main() {
 	router := chi.NewRouter()
 	r := chi.NewRouter() 
 
-	// corsHandler := cors.New(cors.Options{
-    //     AllowedOrigins:   []string{"*"}, // Change this to restrict allowed origins
-    //     AllowedHeaders:   []string{"*"}, // Change this to restrict allowed headers
-    //     AllowCredentials: true,
-    //     //MaxAge:           300, // Cache the preflight response for 5 minutes
-    // })
-
 	//middleware callstack
-	//router.Use(corsHandler.Handler)
 	router.Use(middleware.Recoverer)
 	router.Use(m.RequestMiddlware)
 	r.Use(SessionMiddleware)
 
 	// Routes
-	//TODO : login & register ar not protected routes
-	router.Post("/user", api.RegisterUserAccount(db, c))
-	router.Get("/test", api.Test(db, c))
-	router.Post("/login", api.UserLogin(db, c))
+
+		// Test Route(Ping): 
+		router.Get("/test", api.Test(db, c))
+
+		// Session Creation:
+		//TODO : login & register ar not protected routes
+		router.Post("/user/create", api.RegisterUserAccount(db, c))
+		router.Post("/user/login", api.AccountLogin(db, c))
+
+		// User:
+
+
+
+
 	//  r.Get("/user/profile/{id}", handle.GetUserBySessionId(db, c))
 	//  r.Post("/user/update/{id}", handle.UpdateUser(db, c))
 	//  r.Post("/user/follower/add/{id}", handle.AddFollower(db, c))

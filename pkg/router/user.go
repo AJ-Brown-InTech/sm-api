@@ -1,9 +1,7 @@
 package router
 
 import (
-	//"encoding/base64"
-	//"encoding/json"
-	//"fmt"
+
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -18,11 +16,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/akyoto/cache"
-
-	//"github.com/go-chi/chi/v5"
-	//"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	//"github.com/sirupsen/logrus"
+
 )
 
 func Test(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
@@ -36,6 +31,7 @@ func Test(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 
 func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 	validation := validator.New()
+	validation.RegisterStructValidationMapRules(models.CreateUserValidation, models.User{})
 	return func(w http.ResponseWriter, r *http.Request) {
 		rd := r.Context().Value("Request").(models.Request)
 
@@ -53,6 +49,9 @@ func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 		user.UserId = uuid.New().String()
 		user.UpdatedAt = time.Now()
 		user.CreatedAt = time.Now()
+		user.AccountRating = 0.0
+		user.FollowerCount = 0
+		user.FollowingCount = 0
 		
 		// validate
 		err = validation.Struct(&user)
@@ -90,31 +89,25 @@ func RegisterUserAccount(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 			return
 		}
 
-		// create a session token
+		// store a cache of the user record in the gloabl cache
 		session := models.Session{
 			Token: base64.StdEncoding.EncodeToString([]byte(user.UserId)),
 			Expiration: time.Now().Add(24 * time.Hour),
 		}
 
-		// store a cache of the user record in the gloabl cache
 		c.Set("session_id", &session, 24 * time.Hour) //! add session token to db
 
 		
-		logrus.WithFields(logrus.Fields{"Request": rd}).Info("Successfully created user account") 
+		logrus.WithFields(logrus.Fields{"Request": rd}).Infof("Successfully created user account: %v", user.Username) 
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(w).Encode(&user)
-		if err != nil {
-			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error writing response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
 }
 
-func UserLogin(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
+func AccountLogin(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 	validation := validator.New()
+	validation.RegisterStructValidationMapRules(models.UserLoginValidation, models.User{})
 	return func(w http.ResponseWriter, r *http.Request) {
 		rd := r.Context().Value("Request").(models.Request)
 
@@ -128,24 +121,15 @@ func UserLogin(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 			return
 		}
 		
-		//handle data before db query
-		query := fmt.Sprintf(`SELECT * from users where username =  '%s'`, user.Username)
-		if user.Email != "" {
-			err = validation.Var(user.Email, "email")
-			if err != nil {
-				logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("email validation failed")
-				http.Error(w, err.Error(), http.StatusBadGateway)
-				return
-			}
-			query = fmt.Sprintf(`SELECT * from users where email =  '%s'`, user.Email)
+		var query string
+		if  user.Username != nil {
+			query = fmt.Sprintf("SELECT * FROM users WHERE username = '%s' AND user_password = '%s'", *user.Username, base64.StdEncoding.EncodeToString([]byte(user.Password)))
+		}else {
+			query = fmt.Sprintf("SELECT * FROM users WHERE email = '%s' AND user_password = '%s'", *user.Email,  base64.StdEncoding.EncodeToString([]byte(user.Password)))
 		}
-		err = validation.Var(user.Password, "min=12")
-		if err != nil {
-			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("password length too short")
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		
+
+		logrus.Infof(query)
+
 		err = db.Get(&user, query)
 		if err !=  nil {
 			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error fetching user from the database")
@@ -164,13 +148,7 @@ func UserLogin(db *sqlx.DB, c *cache.Cache) http.HandlerFunc {
 		logrus.WithFields(logrus.Fields{"Request": rd}).Info("successfully fethced user from database") 
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(w).Encode(&user)
-		if err != nil {
-			logrus.WithFields(logrus.Fields{"Request": rd, "Error": err}).Error("error writing response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusAccepted)
 	}
 }
 		//Retrieve all followers of a user
